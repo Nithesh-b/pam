@@ -9,18 +9,23 @@ async function main(): Promise<void> {
   // Load configuration
   const config = loadConfig();
   
+  // Configure logger - use pino-pretty only in development
+  const isProduction = process.env.NODE_ENV === 'production';
+  
   // Create Fastify instance
   const app = Fastify({
-    logger: {
-      level: config.logLevel,
-      transport: {
-        target: 'pino-pretty',
-        options: {
-          translateTime: 'HH:MM:ss Z',
-          ignore: 'pid,hostname',
+    logger: isProduction
+      ? { level: config.logLevel }
+      : {
+          level: config.logLevel,
+          transport: {
+            target: 'pino-pretty',
+            options: {
+              translateTime: 'HH:MM:ss Z',
+              ignore: 'pid,hostname',
+            },
+          },
         },
-      },
-    },
   });
 
   // Validate configuration (warn but don't fail for demo mode)
