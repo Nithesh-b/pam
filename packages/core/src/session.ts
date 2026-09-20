@@ -1,24 +1,83 @@
-import Database from 'better-sqlite3';
 import type { SessionStore, UserSession } from './types.js';
 
-const SCHEMA = `
-  CREATE TABLE IF NOT EXISTS sessions (
-    id TEXT PRIMARY KEY,
-    phone_number TEXT UNIQUE NOT NULL,
-    active_agent TEXT,
-    context TEXT DEFAULT '{}',
-    created_at TEXT NOT NULL,
-    updated_at TEXT NOT NULL
-  );
-  CREATE INDEX IF NOT EXISTS idx_sessions_phone ON sessions(phone_number);
-`;
+/**
+ * Pure JavaScript in-memory session store using Map.
+ * No native dependencies - works everywhere including Render free tier.
+ */
+export class MemorySessionStore implements SessionStore {
+  private sessions: Map<string, UserSession> = new Map();
 
+  async get(phoneNumber: string): Promise<UserSession | null> {
+    return this.sessions.get(phoneNumber) || null;
+  }
+
+  async create(phoneNumber: string): Promise<UserSession> {
+    const now = new Date();
+    const session: UserSession = {
+      id: this.generateId(),
+      phoneNumber,
+      activeAgent: null,
+      context: {},
+      createdAt: now,
+      updatedAt: now,
+    };
+    this.sessions.set(phoneNumber, session);
+    return session;
+  }
+
+  async update(phoneNumber: string, updates: Partial<UserSession>): Promise<UserSession> {
+    let session = await this.get(phoneNumber);
+    if (!session) {
+      session = await this.create(phoneNumber);
+    }
+
+    const updatedSession: UserSession = {
+      ...session,
+      activeAgent: updates.activeAgent !== undefined ? updates.activeAgent : session.activeAgent,
+      context: updates.context !== undefined ? updates.context : session.context,
+      updatedAt: new Date(),
+    };
+
+    this.sessions.set(phoneNumber, updatedSession);
+    return updatedSession;
+  }
+
+  async setActiveAgent(phoneNumber: string, agentId: string | null): Promise<void> {
+    await this.update(phoneNumber, { activeAgent: agentId });
+  }
+
+  async setContext(phoneNumber: string, context: Record<string, unknown>): Promise<void> {
+    await this.update(phoneNumber, { context });
+  }
+
+  async reset(phoneNumber: string): Promise<void> {
+    const session = await this.get(phoneNumber);
+    if (session) {
+      session.activeAgent = null;
+      session.context = {};
+      session.updatedAt = new Date();
+      this.sessions.set(phoneNumber, session);
+    }
+  }
+
+  private generateId(): string {
+    return `sess_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+  }
+}
+
+/**
+ * SQLite-based session store for persistent storage.
+ * Requires better-sqlite3 native module - use only when persistence is needed.
+ */
 export class SQLiteSessionStore implements SessionStore {
-  private db: Database.Database;
+  private db: import('better-sqlite3').Database;
 
   constructor(dbPath: string = ':memory:') {
+    // Dynamic import to avoid loading native module unless needed
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const Database = require('better-sqlite3');
     this.db = new Database(dbPath);
-    this.db.exec(SCHEMA);
+    this.db.exec(SQLITE_SCHEMA);
   }
 
   async get(phoneNumber: string): Promise<UserSession | null> {
@@ -115,6 +174,18 @@ export class SQLiteSessionStore implements SessionStore {
   }
 }
 
+const SQLITE_SCHEMA = `
+  CREATE TABLE IF NOT EXISTS sessions (
+    id TEXT PRIMARY KEY,
+    phone_number TEXT UNIQUE NOT NULL,
+    active_agent TEXT,
+    context TEXT DEFAULT '{}',
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS idx_sessions_phone ON sessions(phone_number);
+`;
+
 interface SessionRow {
   id: string;
   phone_number: string;
@@ -124,6 +195,35 @@ interface SessionRow {
   updated_at: string;
 }
 
+/**
+ * Create a session store.
+ * 
+ * @param dbPath - Path to SQLite database file, ':memory:' for in-memory, or undefined
+ * 
+ * Behavior:
+ * - If SESSION_STORE=memory env var is set, always uses MemorySessionStore
+ * - If dbPath is ':memory:' or undefined, uses MemorySessionStore (no native deps)
+ * - If dbPath is a file path, attempts SQLiteSessionStore, falls back to MemorySessionStore
+ */
 export function createSessionStore(dbPath?: string): SessionStore {
-  return new SQLiteSessionStore(dbPath);
+  // Always use memory store if explicitly requested
+  if (process.env.SESSION_STORE === 'memory') {
+    return new MemorySessionStore();
+  }
+
+  // For :memory: or no path, use pure JS MemorySessionStore (no native deps needed)
+  if (!dbPath || dbPath === ':memory:') {
+    return new MemorySessionStore();
+  }
+
+  // For file-based storage, try SQLite but fall back to memory if native module fails
+  try {
+    return new SQLiteSessionStore(dbPath);
+  } catch (error) {
+    console.warn(
+      `Failed to initialize SQLite session store: ${error instanceof Error ? error.message : error}. ` +
+      'Falling back to in-memory store (sessions will not persist across restarts).'
+    );
+    return new MemorySessionStore();
+  }
 }
