@@ -1,0 +1,27 @@
+{
+  "name": "@pam/agent-airtel",
+  "version": "1.0.0",
+  "description": "Airtel recharge and bill payment agent for PAM",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "tsc --noEmit",
+    "test": "echo 'No tests'"
+  },
+  "dependencies": {
+    "@pam/core": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5"
+  }
+}
