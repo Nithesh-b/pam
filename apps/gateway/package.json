@@ -1,0 +1,35 @@
+{
+  "name": "@pam/gateway",
+  "version": "1.0.0",
+  "description": "WhatsApp webhook gateway for PAM",
+  "type": "module",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "node dist/index.js",
+    "dev": "tsx watch src/index.ts",
+    "clean": "rm -rf dist *.tsbuildinfo",
+    "lint": "tsc --noEmit",
+    "test": "echo 'No tests'"
+  },
+  "dependencies": {
+    "@pam/core": "workspace:*",
+    "@pam/whatsapp": "workspace:*",
+    "@pam/agent-zomato": "workspace:*",
+    "@pam/agent-uber": "workspace:*",
+    "@pam/agent-phonepe": "workspace:*",
+    "@pam/agent-flipkart": "workspace:*",
+    "@pam/agent-blinkit": "workspace:*",
+    "@pam/agent-jiohotstar": "workspace:*",
+    "@pam/agent-truecaller": "workspace:*",
+    "@pam/agent-makemytrip": "workspace:*",
+    "@pam/agent-onemg": "workspace:*",
+    "@pam/agent-airtel": "workspace:*",
+    "fastify": "^4.28.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.12",
+    "typescript": "^5.4.5",
+    "tsx": "^4.11.0"
+  }
+}

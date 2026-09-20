@@ -1,0 +1,27 @@
+{
+  "name": "pam",
+  "version": "1.0.0",
+  "description": "Personal Agent Manager - WhatsApp-based personal OS with 10 specialist agents",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.0.0"
+  },
+  "packageManager": "pnpm@10.33.3",
+  "scripts": {
+    "build": "pnpm -r build",
+    "start": "pnpm --filter @pam/gateway start",
+    "dev": "pnpm --filter @pam/gateway dev",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "clean": "pnpm -r clean"
+  },
+  "keywords": [
+    "whatsapp",
+    "personal-assistant",
+    "chatbot",
+    "agents"
+  ],
+  "author": "",
+  "license": "MIT"
+}
